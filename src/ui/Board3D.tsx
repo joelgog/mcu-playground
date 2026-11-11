@@ -31,6 +31,10 @@ const POSITIONS: Record<string, [number, number]> = {
   pot: [-34, 38],
   temp: [-14, 40],
   ldr: [0, 40],
+  tmp102: [22, -20],
+  eeprom: [38, -20],
+  accel: [20, 12],
+  ledbar: [42, -4],
 };
 
 const BOARD_W = 176;
@@ -275,6 +279,55 @@ function buildPart(spec: DeviceSpec): Part {
         },
       };
     }
+    case 'tmp102':
+    case 'eeprom':
+    case 'accel': {
+      // small surface-mount IC
+      const w = spec.kind === 'accel' ? 5 : 6;
+      group.add(box(w, 1.4, 5, mat(0x1b1b1d, { roughness: 0.35 }), 0.8));
+      for (const dz of [-1.9, -0.6, 0.6, 1.9]) {
+        for (const side of [-1, 1]) {
+          const leg = box(1.2, 0.3, 0.5, mat(0xd0d0cc, { metalness: 0.9, roughness: 0.25 }), 0.2);
+          leg.position.x = side * (w / 2 + 0.5);
+          leg.position.z = dz;
+          group.add(leg);
+        }
+      }
+      if (spec.kind !== 'accel') return idle;
+      // the accelerometer chip visibly tilts with the sliders
+      const chip = new THREE.Group();
+      for (const child of [...group.children]) chip.add(child);
+      group.add(chip);
+      return {
+        spec,
+        group,
+        update(state) {
+          chip.rotation.z = (-Number(state?.tiltX ?? 0) * Math.PI) / 180 / 3;
+          chip.rotation.x = (Number(state?.tiltY ?? 0) * Math.PI) / 180 / 3;
+        },
+      };
+    }
+    case 'ledbar': {
+      group.add(box(10, 1.6, 4, mat(0x1b1b1d, { roughness: 0.35 }), 0.9));
+      const on = new THREE.Color(0xff3b30);
+      const mats: THREE.MeshStandardMaterial[] = [];
+      for (let i = 0; i < 8; i++) {
+        const m = new THREE.MeshStandardMaterial({ color: 0x4a1a16, emissive: 0x000000, roughness: 0.3 });
+        const led = box(2, 1.2, 3.2, m, 0.6);
+        led.position.set(-10.5 + i * 3, 0.6, 6);
+        group.add(led);
+        mats.push(m);
+      }
+      return {
+        spec,
+        group,
+        update(state) {
+          const leds = (state?.leds as number[] | undefined) ?? [];
+          // Q7 is on the left, like the bit order of the byte
+          mats.forEach((m, i) => m.emissive.copy(on).multiplyScalar(leds[7 - i] ? 1.4 : 0));
+        },
+      };
+    }
     case 'console': {
       group.add(box(12, 4.4, 9, mat(0xc4c7cb, { metalness: 0.85, roughness: 0.3 })));
       const slot = box(0.4, 2.6, 6.6, mat(0x111111), 2.2);
@@ -393,7 +446,8 @@ export default function Board3D({ specs }: { specs: DeviceSpec[] }) {
       part.group.traverse((o) => (o.userData.deviceId = spec.id));
       scene.add(part.group);
       parts.push(part);
-      const label = silk(details ? spec.ref : spec.label.replace('On-board ', '').replace(' sensor', ''), details ? 12 : 20);
+      const short = spec.label.replace('On-board ', '').replace(' temperature sensor', ' temp').replace(' sensor', '').replace(' accelerometer', ' accel');
+      const label = silk(details ? spec.ref : short, details ? 12 : 20);
       const tall = spec.kind === 'hcsr04' || spec.kind === 'servo' || spec.kind === 'motor' || spec.kind === 'sevenseg';
       label.position.set(pos[0], TOP + 0.06, pos[1] + (tall ? 14 : 8));
       scene.add(label);

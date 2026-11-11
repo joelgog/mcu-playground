@@ -35,6 +35,9 @@ export interface Peripheral {
   /** Read without side effects; defaults to read32. */
   peek32?(offset: number): number;
   write32(offset: number, value: number): void;
+  /** Optional byte-wide access for registers whose behaviour depends on the access size (SPI data register). */
+  readByte?(offset: number): number;
+  writeByte?(offset: number, value: number): void;
   reset(): void;
 }
 
@@ -54,8 +57,8 @@ const hex = (n: number) => '0x' + (n >>> 0).toString(16).toUpperCase().padStart(
 
 /** Peripherals that exist on the real chip but are not simulated: access is tolerated with a hint. */
 const UNSIMULATED: Array<[number, string]> = [
-  [0x40002800, 'RTC'], [0x40002c00, 'WWDG'], [0x40003800, 'SPI2'], [0x40004800, 'USART3'],
-  [0x40004c00, 'USART4'], [0x40005400, 'I2C1'], [0x40005800, 'I2C2'], [0x40005c00, 'USB'],
+  [0x40002800, 'RTC'], [0x40002c00, 'WWDG'], [0x40004800, 'USART3'],
+  [0x40004c00, 'USART4'], [0x40005800, 'I2C2'], [0x40005c00, 'USB'],
   [0x40006400, 'CAN'], [0x40006c00, 'CRS'], [0x40007000, 'PWR'], [0x40007400, 'DAC'],
   [0x40007800, 'CEC'], [0x40012c00, 'TIM1'], [0x40013000, 'SPI1'], [0x40013800, 'USART1'],
   [0x40014000, 'TIM15'], [0x40014400, 'TIM16'], [0x40014800, 'TIM17'], [0x40015800, 'DBGMCU'],
@@ -142,6 +145,10 @@ export class Bus {
     if (((a - RAM_BASE) >>> 0) < RAM_SIZE) return this.ram[a - RAM_BASE];
     if (((a - FLASH_BASE) >>> 0) < FLASH_SIZE) return this.flash[a - FLASH_BASE];
     if (a < FLASH_SIZE) return this.flash[a];
+    if (a >= 0x40000000 && a < 0x50000000) {
+      const m = this.periph.get(a >>> 10);
+      if (m && m.p.readByte && m.clocked()) return m.p.readByte(a & 0x3ff) & 0xff;
+    }
     return (this.slowRead32(a & ~3) >>> ((a & 3) * 8)) & 0xff;
   }
 
@@ -175,6 +182,13 @@ export class Bus {
     if (((a - RAM_BASE) >>> 0) < RAM_SIZE) {
       this.ram[a - RAM_BASE] = value;
       return;
+    }
+    if (a >= 0x40000000 && a < 0x50000000) {
+      const m = this.periph.get(a >>> 10);
+      if (m && m.p.writeByte && m.clocked()) {
+        m.p.writeByte(a & 0x3ff, value & 0xff);
+        return;
+      }
     }
     const sh = (a & 3) * 8;
     this.slowWrite32(a & ~3, (value & 0xff) << sh, 0xff << sh);

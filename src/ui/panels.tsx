@@ -26,7 +26,10 @@ export function ExerciseList() {
   const done = EXERCISES.filter((e) => passed[e.id]).length;
   return (
     <nav className="sidebar" aria-label="Projects">
-      <button className={`side-item side-sandbox${projectId === SANDBOX ? ' active' : ''}`} onClick={() => actions.selectProject(SANDBOX)}>
+      <button className={`side-item side-sandbox${projectId === SANDBOX ? ' active' : ''}`} onClick={() => actions.selectProject(SANDBOX)} title="Sandbox: full board, your own code">
+        <span className="side-mark side-mark-sandbox" aria-hidden="true">
+          S
+        </span>
         <span className="side-title">Sandbox</span>
         <span className="side-sub">Full board, your own code</span>
       </button>
@@ -38,7 +41,7 @@ export function ExerciseList() {
       </div>
       <div className="side-scroll">
         {EXERCISES.map((e, i) => (
-          <button key={e.id} className={`side-item${projectId === e.id ? ' active' : ''}`} onClick={() => actions.selectProject(e.id)}>
+          <button key={e.id} className={`side-item${projectId === e.id ? ' active' : ''}`} onClick={() => actions.selectProject(e.id)} title={`${e.title}: ${e.summary}`}>
             <span className={`side-mark${passed[e.id] ? ' done' : ''}`} aria-label={passed[e.id] ? 'done' : 'not done'}>
               {passed[e.id] ? <Icon name="check" /> : i + 1}
             </span>

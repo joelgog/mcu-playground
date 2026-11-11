@@ -46,6 +46,11 @@ export class Rcc implements Peripheral {
     return ppre === 1 ? 1 : ppre / 2;
   }
 
+  /** Kernel clock of I2C1: HSI by default, SYSCLK if I2C1SW is set in CFGR3. */
+  i2c1Hz(): number {
+    return this.cfgr3 & 0x10 ? this.sysclk : HSI;
+  }
+
   /** HCLK cycles per PCLK cycle. */
   pclkDiv(): number {
     return APB_DIV[(this.cfgr >> 8) & 7];

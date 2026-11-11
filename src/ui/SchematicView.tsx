@@ -20,6 +20,8 @@ interface PinRow {
   pin: string;
   role: string;
   y: number;
+  /** The pin is already drawn on the MCU for another device on the same bus: show a net label instead of a wire. */
+  shared: boolean;
 }
 interface Placed {
   spec: DeviceSpec;
@@ -41,13 +43,18 @@ function layout(specs: DeviceSpec[]): { placed: Placed[]; height: number } {
   if (seg) sides[count('left') <= count('right') ? 'left' : 'right'].push(seg);
 
   const placed: Placed[] = [];
+  const seen = new Set<string>();
   let height = 0;
   for (const side of ['left', 'right'] as Side[]) {
     let y = TOP;
     for (const spec of sides[side]) {
       const needsHeadroom = spec.kind === 'button' && spec.options?.pullup === true;
       if (needsHeadroom) y += 10;
-      const rows: PinRow[] = Object.entries(spec.pins).map(([role, pin], i) => ({ pin, role, y: y + i * PITCH }));
+      const rows: PinRow[] = Object.entries(spec.pins).map(([role, pin], i) => {
+        const shared = seen.has(pin);
+        seen.add(pin);
+        return { pin, role, y: y + i * PITCH, shared };
+      });
       placed.push({ spec, side, rows });
       y += rows.length * PITCH + PITCH * 0.45;
     }
@@ -105,11 +112,16 @@ function valueText(spec: DeviceSpec, st: DeviceState | undefined): string {
     case 'buzzer': return st.on ? fmtFreq(Number(st.freq)) : 'silent';
     case 'sevenseg': return `"${String(st.char)}"`;
     case 'console': return '115200 Bd';
+    case 'tmp102': return `${Number(st.tempC).toFixed(1)} °C`;
+    case 'eeprom': return `${Number(st.writes)} writes`;
+    case 'ledbar': return (st.leds as number[]).slice().reverse().join('');
+    case 'accel': return `${Number(st.x)} ${Number(st.y)} ${Number(st.z)} mg`;
     default: return '';
   }
 }
 
 const PART: Partial<Record<DeviceSpec['kind'], string>> = {
+  tmp102: 'TMP102 @0x48', eeprom: '24C02 @0x50', ledbar: '74HC595', accel: 'LIS3DH',
   temp: 'MCP9700', hcsr04: 'HC-SR04', servo: 'SG90', motor: 'H-bridge', console: 'USB serial', sevenseg: '7-seg CC', rgb: 'RGB LED', ldr: 'LDR + 10k', buzzer: 'Piezo',
 };
 
@@ -158,18 +170,26 @@ export function SchematicView({ specs }: { specs: DeviceSpec[] }) {
       const cls = netClass(n);
       const reach = spec.kind === 'led' ? 26 : spec.kind === 'button' ? 60 : spec.kind === 'pot' ? 78 : 50;
       parts.push(
-        <g key={`w-${row.pin}`} className={`net ${cls}${watch.includes(row.pin) ? ' watched' : ''}`} onClick={() => actions.toggleWatch(row.pin)} {...hover(row.pin, `${row.pin} · ${spec.label}${rows.length > 1 ? ` ${row.role}` : ''}`)}>
-          <line className="hit" x1={edge} y1={row.y} x2={X(reach)} y2={row.y} />
-          <line className="wire" x1={edge} y1={row.y} x2={X(reach)} y2={row.y} />
-          {watch.includes(row.pin) && <circle className="probe" cx={X(10)} cy={row.y} r="3" />}
-          {details && (
+        <g key={`w-${spec.id}-${row.pin}`} className={`net ${cls}${watch.includes(row.pin) ? ' watched' : ''}`} onClick={() => actions.toggleWatch(row.pin)} {...hover(row.pin, `${row.pin} · ${spec.label}${rows.length > 1 ? ` ${row.role}` : ''}`)}>
+          <line className="hit" x1={row.shared ? X(8) : edge} y1={row.y} x2={X(reach)} y2={row.y} />
+          <line className="wire" x1={row.shared ? X(30) : edge} y1={row.y} x2={X(reach)} y2={row.y} />
+          {row.shared && (
+            <>
+              <path className="net-flag" d={`M${X(30)} ${row.y}l${-dir * 4} -4.5h${-dir * 20}v9h${dir * 20}z`} />
+              <text className="net-flag-text" x={X(44) - dir * 26} y={row.y + 3} textAnchor="middle">
+                {row.pin}
+              </text>
+            </>
+          )}
+          {watch.includes(row.pin) && !row.shared && <circle className="probe" cx={X(10)} cy={row.y} r="3" />}
+          {details && !row.shared && (
             <text className="net-label" x={X(4)} y={row.y - 4} textAnchor={anchor}>
               {shortNet(n)}
             </text>
           )}
         </g>,
       );
-      mcuPins.push(
+      if (!row.shared) mcuPins.push(
         <g key={`p-${row.pin}`}>
           <text className="pin-label" x={side === 'right' ? MCU_X1 - 6 : MCU_X0 + 6} y={row.y + 3.5} textAnchor={side === 'right' ? 'end' : 'start'}>
             {row.pin}

@@ -125,12 +125,21 @@ export function DeviceControl({ spec, state, compact }: { spec: DeviceSpec; stat
       return <Slider spec={spec} name="light" min={0} max={1} step={0.01} external={state?.light as number | undefined} fallback={0.5} format={(v) => `${Math.round(v * 100)} % light`} />;
     case 'hcsr04':
       return <Slider spec={spec} name="distanceCm" min={2} max={400} step={1} external={state?.distanceCm as number | undefined} fallback={50} format={(v) => `${Math.round(v)} cm`} />;
+    case 'tmp102':
+      return <Slider spec={spec} name="tempC" min={-25} max={100} step={0.5} external={state?.tempC as number | undefined} fallback={23.5} format={(v) => `${v.toFixed(1)} °C`} />;
+    case 'accel':
+      return (
+        <>
+          <Slider spec={spec} name="tiltX" min={-90} max={90} step={1} external={state?.tiltX as number | undefined} fallback={0} format={(v) => `tilt X ${Math.round(v)}°`} />
+          <Slider spec={spec} name="tiltY" min={-90} max={90} step={1} external={state?.tiltY as number | undefined} fallback={0} format={(v) => `tilt Y ${Math.round(v)}°`} />
+        </>
+      );
     default:
       return null;
   }
 }
 
-const INPUT_KINDS = new Set(['button', 'pot', 'temp', 'ldr', 'hcsr04']);
+const INPUT_KINDS = new Set(['button', 'pot', 'temp', 'ldr', 'hcsr04', 'tmp102', 'accel']);
 
 function InputsStrip({ specs }: { specs: DeviceSpec[] }) {
   const devices = useApp((s) => s.frame?.board.devices);
@@ -329,6 +338,49 @@ function DeviceVisual({ spec, state }: { spec: DeviceSpec; state: DeviceState | 
         </div>
       );
     }
+    case 'tmp102':
+      return (
+        <div className="viz viz-wide">
+          <DeviceControl spec={spec} state={state} />
+          <span className="viz-value">
+            address 0x48{state ? ` · register 0x${Number(state.raw).toString(16).toUpperCase().padStart(4, '0')} · ${Number(state.reads)} reads` : ''}
+          </span>
+        </div>
+      );
+    case 'eeprom':
+      return (
+        <div className="viz viz-wide">
+          <span className="viz-value viz-mono">{state ? String(state.head) : 'FF FF FF FF FF FF FF FF'}</span>
+          <span className="viz-value">
+            address 0x50 · first 8 bytes{state ? ` · ${Number(state.writes)} writes${state.busy ? ' · writing' : ''}` : ''}
+          </span>
+        </div>
+      );
+    case 'ledbar': {
+      const leds = (state?.leds as number[] | undefined) ?? [0, 0, 0, 0, 0, 0, 0, 0];
+      return (
+        <div className="viz">
+          <div className="ledrow" role="img" aria-label="Eight LEDs driven by the shift register">
+            {[7, 6, 5, 4, 3, 2, 1, 0].map((i) => (
+              <span key={i} className="led led-small" style={{ ['--led' as string]: '#e5484d', ['--b' as string]: leds[i] }} title={`Q${i}`} />
+            ))}
+          </div>
+          <span className="viz-value">
+            Q7..Q0 = {leds.slice().reverse().join('')}
+            {state ? ` · 0x${Number(state.value).toString(16).toUpperCase().padStart(2, '0')}` : ''}
+          </span>
+        </div>
+      );
+    }
+    case 'accel':
+      return (
+        <div className="viz viz-wide">
+          <DeviceControl spec={spec} state={state} />
+          <span className="viz-value">
+            {state ? `X ${Number(state.x)}  Y ${Number(state.y)}  Z ${Number(state.z)} mg${state.enabled ? '' : ' · powered down'}` : 'X 0  Y 0  Z 1000 mg'}
+          </span>
+        </div>
+      );
     case 'console':
       return (
         <div className="viz">

@@ -9,7 +9,8 @@ import { Mcu } from '../emu/mcu';
 import { Net, NetProbe, VDD } from './net';
 
 export type DeviceKind =
-  | 'led' | 'rgb' | 'button' | 'pot' | 'temp' | 'ldr' | 'servo' | 'motor' | 'buzzer' | 'hcsr04' | 'sevenseg' | 'console';
+  | 'led' | 'rgb' | 'button' | 'pot' | 'temp' | 'ldr' | 'servo' | 'motor' | 'buzzer' | 'hcsr04' | 'sevenseg' | 'console'
+  | 'tmp102' | 'eeprom' | 'ledbar' | 'accel';
 
 export interface DeviceSpec {
   id: string;
@@ -451,5 +452,6 @@ export function createDevice(spec: DeviceSpec, mcu: Mcu): Device {
     case 'hcsr04': return new Hcsr04(spec, mcu);
     case 'sevenseg': return new SevenSeg(spec, mcu);
     case 'console': return new SerialConsole(spec, mcu);
+    default: throw new Error(`Unknown device kind: ${spec.kind}`);
   }
 }

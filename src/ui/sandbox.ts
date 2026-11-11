@@ -15,10 +15,13 @@ export const SANDBOX_MAIN = String.raw`#include "stm32f0xx.h"
  *   PB8   button A                PB9   button B   (to GND, no pull-up fitted)
  *   PA0   potentiometer           PA1   temperature sensor (500 mV + 10 mV/C)
  *   PA6   light sensor            PA4   buzzer
- *   PB10  servo                   PA7   motor PWM, PB14 / PB15 direction
+ *   PB10  servo                   PA7   motor PWM, PA9 / PA10 direction
  *   PA8   ultrasonic trigger      PB3   ultrasonic echo
  *   PC0..PC7   7-segment display, segments a b c d e f g dp
  *   PA2 / PA3  serial console (USART2 TX / RX, 115200 baud)
+ *   PB6 / PB7  I2C1 SCL / SDA: temperature sensor (0x48), EEPROM (0x50)
+ *   PB13 / PB14 / PB15  SPI2 SCK / MISO / MOSI
+ *   PB12  LED bar latch           PB11  accelerometer chip select
  */
 
 static volatile uint32_t ms_ticks;

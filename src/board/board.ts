@@ -1,5 +1,6 @@
 /** The playground board: which devices are fitted and which MCU pins they use. */
 import { Mcu } from '../emu/mcu';
+import { createBusDevice } from './busDevices';
 import { Button, Device, DeviceSpec, DeviceState, SerialConsole, createDevice } from './devices';
 import { NetProbe } from './net';
 
@@ -19,12 +20,16 @@ export const STANDARD_DEVICES: DeviceSpec[] = [
   { id: 'ldr', kind: 'ldr', label: 'Light sensor', ref: 'R9', pins: { out: 'PA6' } },
   { id: 'buzzer', kind: 'buzzer', label: 'Buzzer', ref: 'BZ1', pins: { signal: 'PA4' } },
   { id: 'servo', kind: 'servo', label: 'Servo', ref: 'M1', pins: { signal: 'PB10' } },
-  { id: 'motor', kind: 'motor', label: 'DC motor', ref: 'M2', pins: { en: 'PA7', in1: 'PB14', in2: 'PB15' } },
+  { id: 'motor', kind: 'motor', label: 'DC motor', ref: 'M2', pins: { en: 'PA7', in1: 'PA9', in2: 'PA10' } },
   { id: 'sonar', kind: 'hcsr04', label: 'Distance sensor', ref: 'U3', pins: { trig: 'PA8', echo: 'PB3' } },
   {
     id: 'seg', kind: 'sevenseg', label: '7-segment display', ref: 'DS1',
     pins: { a: 'PC0', b: 'PC1', c: 'PC2', d: 'PC3', e: 'PC4', f: 'PC5', g: 'PC6', dp: 'PC7' },
   },
+  { id: 'tmp102', kind: 'tmp102', label: 'I2C temperature sensor', ref: 'U4', pins: { scl: 'PB6', sda: 'PB7' } },
+  { id: 'eeprom', kind: 'eeprom', label: 'I2C EEPROM', ref: 'U5', pins: { scl: 'PB6', sda: 'PB7' } },
+  { id: 'ledbar', kind: 'ledbar', label: 'SPI LED bar', ref: 'U6', pins: { sck: 'PB13', mosi: 'PB15', latch: 'PB12' } },
+  { id: 'accel', kind: 'accel', label: 'SPI accelerometer', ref: 'U7', pins: { sck: 'PB13', miso: 'PB14', mosi: 'PB15', cs: 'PB11' } },
 ];
 
 export interface NetSnapshot {
@@ -61,7 +66,7 @@ export class Board {
       options: { ...d.options, ...overrides[d.id] },
     }));
     for (const spec of this.specs) {
-      this.devices.set(spec.id, createDevice(spec, mcu));
+      this.devices.set(spec.id, createBusDevice(spec, mcu) ?? createDevice(spec, mcu));
       for (const pin of Object.values(spec.pins)) {
         if (!this.probes.has(pin)) this.probes.set(pin, new NetProbe(mcu.net(pin)));
       }

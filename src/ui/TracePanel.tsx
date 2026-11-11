@@ -49,7 +49,9 @@ export function TracePanel() {
   for (const d of specs) {
     for (const [role, pin] of Object.entries(d.pins)) {
       const many = Object.keys(d.pins).length > 1;
-      pinLabels.set(pin, many ? `${d.label} ${role}` : d.label);
+      // a pin shared by several bus devices is labelled by its bus role (SCL, MOSI, ...)
+      if (pinLabels.has(pin)) pinLabels.set(pin, `${role.toUpperCase()} bus`);
+      else pinLabels.set(pin, many ? `${d.label} ${role}` : d.label);
     }
   }
   const labelsKey = [...pinLabels.entries()].map((e) => e.join('=')).join(',');
@@ -89,7 +91,7 @@ export function TracePanel() {
       g.strokeStyle = col('--line');
       g.fillStyle = col('--faint');
       g.lineWidth = 1;
-      const divisions = 5;
+      const divisions = plotW < 340 ? 3 : 5;
       for (let i = 0; i <= divisions; i++) {
         const gx = Math.round(labelW + (plotW * i) / divisions) + 0.5;
         g.beginPath();
@@ -153,14 +155,15 @@ export function TracePanel() {
         g.fillText(pin, 8, top + 14);
         g.fillStyle = col('--muted');
         const label = pinLabels.get(pin);
-        if (label) g.fillText(label.length > 16 ? `${label.slice(0, 15)}…` : label, 44, top + 14);
+        const twoLines = rowH >= 30;
+        if (label && twoLines) g.fillText(label.length > 16 ? `${label.slice(0, 15)}…` : label, 44, top + 14);
         let stat: string;
         if (!d || d.t.length === 0) stat = 'no data yet';
         else if (analog) stat = `${lastV.toFixed(2)} V`;
         else if (rises >= 2) stat = `${fmtFreq(rises / span)}  ${Math.round((highTime / span) * 100)} %`;
         else stat = lastV > 1.65 ? 'high' : 'low';
-        if (rowH >= 34) g.fillText(stat, 8, top + 28);
-        else g.fillText(stat, 8 + 96, top + 14);
+        if (twoLines) g.fillText(stat, 8, top + 27);
+        else g.fillText(stat, 44, top + 14);
       });
       raf = requestAnimationFrame(draw);
     };

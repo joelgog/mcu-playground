@@ -46,8 +46,10 @@ prints. Your code is saved automatically to `workspace/<project>/`.
 | PB8 / PB9 | button A / B (to GND, no pull-up fitted) | PA0 | potentiometer |
 | PA1 | temperature sensor (500 mV + 10 mV/°C) | PA6 | light sensor |
 | PA4 | buzzer | PB10 | servo |
-| PA7, PB14, PB15 | motor PWM, direction 1, direction 2 | PA8 / PB3 | ultrasonic trigger / echo |
+| PA7, PA9, PA10 | motor PWM, direction 1, direction 2 | PA8 / PB3 | ultrasonic trigger / echo |
 | PC0..PC7 | 7-segment a b c d e f g dp | PA2 / PA3 | serial console TX / RX (115200) |
+| PB6 / PB7 | I2C1 SCL / SDA: temperature sensor (0x48), EEPROM (0x50) | PB13 / PB14 / PB15 | SPI2 SCK / MISO / MOSI |
+| PB12 | LED bar latch (74HC595) | PB11 | accelerometer chip select |
 
 ## What is simulated
 
@@ -57,9 +59,10 @@ access).
 
 Peripherals (register level): RCC (clock gating, HSI / HSI48 / PLL), GPIO A-D and F,
 SYSCFG + EXTI, TIM2 / TIM3 / TIM14 / TIM6 / TIM7 (up-counting, PWM, output compare,
-input capture, one-pulse), ADC, USART2, IWDG.
+input capture, one-pulse), ADC, USART2, IWDG, I2C1 (master) and SPI2 (master),
+with bit-accurate waveforms on the bus pins.
 
-Not simulated: SPI, I2C, DMA, USB, CAN, RTC, TIM1 and TIM15-17, down-counting and
+Not simulated: SPI1, I2C2, I2C/SPI slave mode, DMA, USB, CAN, RTC, TIM1 and TIM15-17, down-counting and
 encoder timer modes, low-power Stop/Standby. Touching one of these gives a hint
 instead of a crash.
 

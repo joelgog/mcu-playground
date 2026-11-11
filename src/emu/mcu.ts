@@ -7,6 +7,8 @@ import { ElfImage, ElfSymbol, loadImage, parseElf, symbolAt } from './elf';
 import { Adc } from './peripherals/adc';
 import { Exti, Syscfg } from './peripherals/exti';
 import { AfMux, GpioPort } from './peripherals/gpio';
+import { I2c } from './peripherals/i2c';
+import { Spi } from './peripherals/spi';
 import { FlashIf, Iwdg } from './peripherals/misc';
 import { Rcc, ResetCause } from './peripherals/rcc';
 import { Timer } from './peripherals/timer';
@@ -37,6 +39,8 @@ export class Mcu {
   readonly adc: Adc;
   readonly usart2: Usart;
   readonly iwdg: Iwdg;
+  readonly i2c1: I2c;
+  readonly spi2: Spi;
   readonly flashIf = new FlashIf();
   readonly nets = new Map<string, Net>();
 
@@ -133,6 +137,34 @@ export class Mcu {
     this.iwdg = new Iwdg(this.clock, () => this.requestReset('iwdg'), hint);
     this.bus.map(0x40003000, this.iwdg);
 
+    this.i2c1 = new I2c('I2C1', {
+      clock: this.clock,
+      afmux: this.afmux,
+      setIrq: (level) => this.cpu.setIrqLine(23, level),
+      kernelHz: () => this.rcc.i2c1Hz(),
+      hint,
+    });
+    this.i2c1.openDrainCheck = (pin) => {
+      const port = this.ports.get(pin[1])!;
+      if (!((port.otyper >>> Number(pin.slice(2))) & 1)) {
+        hint(
+          `i2c:od:${pin}`,
+          `${pin} is used for I2C but is configured push-pull. I2C lines must be open-drain (set the pin's OTYPER bit), ` +
+            `otherwise the chip and the device short each other when they drive opposite levels.`,
+        );
+      }
+    };
+    this.bus.map(0x40005400, this.i2c1, () => (this.rcc.apb1enr & (1 << 21)) !== 0);
+
+    this.spi2 = new Spi('SPI2', {
+      clock: this.clock,
+      afmux: this.afmux,
+      setIrq: (level) => this.cpu.setIrqLine(26, level),
+      pclkDiv: () => this.rcc.pclkDiv(),
+      hint,
+    });
+    this.bus.map(0x40003800, this.spi2, () => (this.rcc.apb1enr & (1 << 14)) !== 0);
+
     this.resetPeripherals('power');
   }
 
@@ -178,6 +210,8 @@ export class Mcu {
     this.adc.reset();
     this.usart2.reset();
     this.iwdg.reset();
+    this.i2c1.reset();
+    this.spi2.reset();
     for (const p of this.ports.values()) p.reset();
   }
 
