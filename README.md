@@ -36,6 +36,11 @@ prints. Your code is saved automatically to `workspace/<project>/`.
   explain mistakes which fail silently on real hardware (peripheral clock off,
   floating input, interrupt flag never cleared, UART overrun, ...).
 - **HardFault explanations** with the source line.
+- **Built-in reference**: how to find a register in the documentation, the source
+  documents (RM0091, datasheet, PM0215, UM1724, device datasheets), and every simulated
+  register bit by bit with what it does and why. Hover a register or bit macro in the
+  editor, press F1 on it, or type `RCC->` for a list. Bit positions, macro names and
+  offsets are checked against ST's header by `tests/reference.test.ts`.
 
 ## Board pin map
 

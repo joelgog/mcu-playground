@@ -1,7 +1,35 @@
 import * as monaco from 'monaco-editor/editor';
 import 'monaco-editor/languages/definitions/cpp/register';
+// Editor features are separate modules in this Monaco version; load the ones a code editor needs.
+import 'monaco-editor/features/codicon/register';
+import 'monaco-editor/features/codeEditor/register';
+import 'monaco-editor/features/bracketMatching/register';
+import 'monaco-editor/features/caretOperations/register';
+import 'monaco-editor/features/clipboard/register';
+import 'monaco-editor/features/comment/register';
+import 'monaco-editor/features/contextmenu/register';
+import 'monaco-editor/features/cursorUndo/register';
+import 'monaco-editor/features/find/register';
+import 'monaco-editor/features/folding/register';
+import 'monaco-editor/features/hover/register';
+import 'monaco-editor/features/indentation/register';
+import 'monaco-editor/features/lineSelection/register';
+import 'monaco-editor/features/linesOperations/register';
+import 'monaco-editor/features/multicursor/register';
+import 'monaco-editor/features/smartSelect/register';
+import 'monaco-editor/features/snippet/register';
+import 'monaco-editor/features/suggest/register';
+import 'monaco-editor/features/wordHighlighter/register';
+import 'monaco-editor/features/wordOperations/register';
+// These controllers are not covered by a feature module but are part of Monaco's full build.
+import 'monaco-editor/editor/browser/coreCommands';
+import 'monaco-editor/editor/contrib/suggest/browser/suggestController';
+import 'monaco-editor/editor/contrib/find/browser/findController';
+import 'monaco-editor/editor/common/standaloneStrings';
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 import { useEffect, useRef, useState } from 'react';
+import { PERIPHERALS, SYMBOLS, concreteMacros, lookup, peripheralFor } from '../reference/registers';
+import { sourceById } from '../reference/sources';
 import { actions, currentExercise, projectFiles, useApp } from './store';
 import { Icon } from './App';
 
@@ -38,6 +66,119 @@ function defineThemes(): void {
   });
 }
 defineThemes();
+
+// ------------------------------------------------- reference integration
+
+/** The register expression or identifier under a position: "RCC->AHBENR" or "RCC_AHBENR_GPIOAEN". */
+function expressionAt(model: monaco.editor.ITextModel, position: monaco.Position): { text: string; range: monaco.Range } | null {
+  const line = model.getLineContent(position.lineNumber);
+  for (const m of line.matchAll(/([A-Za-z_]\w*)->(\w+(?:\[\d\])?)/g)) {
+    const start = m.index + 1;
+    const end = start + m[0].length;
+    if (position.column >= start && position.column <= end) {
+      return { text: m[0], range: new monaco.Range(position.lineNumber, start, position.lineNumber, end) };
+    }
+  }
+  const word = model.getWordAtPosition(position);
+  return word ? { text: word.word, range: new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn) } : null;
+}
+
+/** Member names to offer after "PERIPH->", expanding array and numbered registers. */
+function memberNames(member: string): string[] {
+  if (member === 'AFR[0]') return ['AFR[0]', 'AFR[1]'];
+  if (member === 'EXTICR[0]') return ['EXTICR[0]', 'EXTICR[1]', 'EXTICR[2]', 'EXTICR[3]'];
+  if (member === 'CCR1') return ['CCR1', 'CCR2', 'CCR3', 'CCR4'];
+  return [member];
+}
+
+function registerReferenceProviders(): monaco.IDisposable[] {
+  const hover = monaco.languages.registerHoverProvider('c', {
+    provideHover(model, position) {
+      const expr = expressionAt(model, position);
+      if (!expr) return null;
+      const hit = lookup(expr.text);
+      if (hit) {
+        const src = sourceById(hit.periph.source.doc);
+        const offset = `0x${hit.reg.offset.toString(16).toUpperCase().padStart(2, '0')}`;
+        const lines = [`**${hit.periph.instances[0]}->${hit.reg.member}** \u00b7 ${hit.reg.title} \u00b7 offset ${offset}`, hit.reg.what];
+        if (hit.field) lines.push(`**Bit${hit.field.bits.includes(':') ? 's' : ''} ${hit.field.bits} \u00b7 ${hit.field.name}** \u2014 ${hit.field.desc}`);
+        else lines.push(`*Why:* ${hit.reg.why}`);
+        lines.push(`*Source: ${src.short}, chapter \u201c${hit.periph.source.chapter}\u201d. Press F1 for the full register.*`);
+        return { range: expr.range, contents: lines.map((value) => ({ value })) };
+      }
+      const sym = SYMBOLS.find((s) => s.name === expr.text);
+      if (sym) {
+        const src = sourceById(sym.source.doc);
+        return {
+          range: expr.range,
+          contents: [{ value: '```c\n' + sym.signature + '\n```' }, { value: sym.desc }, { value: `*Source: ${src.short}, ${sym.source.chapter}.*` }],
+        };
+      }
+      return null;
+    },
+  });
+
+  const completion = monaco.languages.registerCompletionItemProvider('c', {
+    triggerCharacters: ['>'],
+    provideCompletionItems(model, position) {
+      const before = model.getValueInRange({ startLineNumber: position.lineNumber, startColumn: 1, endLineNumber: position.lineNumber, endColumn: position.column });
+      const word = model.getWordUntilPosition(position);
+      const range = new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn);
+      const arrow = /([A-Za-z_]\w*)->(\w*)$/.exec(before);
+      if (arrow) {
+        const periph = peripheralFor(arrow[1]);
+        if (!periph) return { suggestions: [] };
+        return {
+          suggestions: periph.registers.flatMap((r, i) =>
+            memberNames(r.member).map((name, j) => ({
+              label: name,
+              kind: monaco.languages.CompletionItemKind.Field,
+              insertText: name,
+              detail: r.title,
+              documentation: `${r.what}\n\n${r.why}`,
+              sortText: String(i * 10 + j).padStart(4, '0'),
+              range,
+            })),
+          ),
+        };
+      }
+      const prefix = word.word;
+      if (prefix.length < 3) return { suggestions: [] };
+      const suggestions: monaco.languages.CompletionItem[] = [];
+      for (const m of concreteMacros()) {
+        if (m.macro.startsWith(prefix)) {
+          suggestions.push({
+            label: m.macro,
+            kind: monaco.languages.CompletionItemKind.Constant,
+            insertText: m.macro,
+            detail: `${m.periph.id}->${m.reg.name} bit ${m.field.bits}`,
+            documentation: m.field.desc,
+            range,
+          });
+        }
+      }
+      for (const p of PERIPHERALS) {
+        for (const inst of p.instances) {
+          if (inst.startsWith(prefix)) {
+            suggestions.push({ label: inst, kind: monaco.languages.CompletionItemKind.Variable, insertText: inst, detail: p.title, documentation: p.intro, range });
+          }
+        }
+      }
+      for (const s of SYMBOLS) {
+        if (s.name.startsWith(prefix)) {
+          suggestions.push({ label: s.name, kind: monaco.languages.CompletionItemKind.Function, insertText: s.name, detail: s.signature, documentation: s.desc, range });
+        }
+      }
+      return { suggestions: suggestions.slice(0, 60) };
+    },
+  });
+  return [hover, completion];
+}
+
+// Register once, also across hot reloads during development.
+const providerHost = window as unknown as { __mcuReferenceProviders?: monaco.IDisposable[] };
+providerHost.__mcuReferenceProviders?.forEach((d) => d.dispose());
+providerHost.__mcuReferenceProviders = registerReferenceProviders();
 
 const dark = window.matchMedia('(prefers-color-scheme: dark)');
 const themeName = () => (dark.matches ? 'mcu-dark' : 'mcu-light');
@@ -86,7 +227,24 @@ export function CodeEditor() {
       fixedOverflowWidgets: true,
     });
     editorRef.current = editor;
+    (window as unknown as { __mcuEditor?: unknown }).__mcuEditor = editor; // handy for debugging from the console
     decorations.current = editor.createDecorationsCollection();
+    editor.addAction({
+      id: 'mcu.lookupReference',
+      label: 'Look up in reference',
+      keybindings: [monaco.KeyCode.F1],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 0,
+      run: (ed) => {
+        const pos = ed.getPosition();
+        const model = ed.getModel();
+        const expr = pos && model ? expressionAt(model, pos) : null;
+        const hit = expr ? lookup(expr.text) : null;
+        if (hit) actions.openReference(hit.periph.id, hit.reg.name);
+        else if (expr && SYMBOLS.some((s) => s.name === expr.text)) actions.openReference('docs', null);
+        else actions.openReference('guide', null);
+      },
+    });
     const sub = editor.onDidChangeModelContent(() => {
       if (suppress.current) return;
       const model = editor.getModel();

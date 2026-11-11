@@ -7,6 +7,8 @@ const c = String.raw;
 
 export const thermostat: Exercise = {
   id: 'thermostat',
+  refs: ['RCC.APB2ENR', 'ADC.CR', 'ADC.ISR', 'ADC.CHSELR', 'ADC.SMPR', 'ADC.DR'],
+  sources: ['rm', 'mcp9700'],
   title: 'ADC and hysteresis',
   summary: 'Fixed-point temperature and an alarm that does not flicker',
   brief:
@@ -122,6 +124,8 @@ int main(void)
 
 export const sonar: Exercise = {
   id: 'input-capture',
+  refs: ['GPIO.AFR', 'TIM.CCMR1', 'TIM.CCER', 'TIM.SR', 'TIM.CCR1', 'TIM.CNT'],
+  sources: ['rm', 'ds'],
   title: 'Input capture',
   summary: 'Measure distance with an ultrasonic sensor',
   brief:
@@ -251,6 +255,8 @@ int main(void)
 
 export const sharedData: Exercise = {
   id: 'shared-data',
+  refs: ['__disable_irq', '__enable_irq', 'TIM.SR'],
+  sources: ['pm', 'arm'],
   title: 'Sharing data with an ISR',
   summary: 'Fix a missing volatile and a torn read',
   brief:
@@ -428,6 +434,8 @@ int main(void)
 
 export const trafficLight: Exercise = {
   id: 'state-machine',
+  refs: ['SysTick_Config', 'GPIO.BSRR', 'GPIO.IDR', 'GPIO.PUPDR'],
+  sources: ['rm'],
   title: 'State machine',
   summary: 'A pedestrian crossing that never blocks',
   brief:

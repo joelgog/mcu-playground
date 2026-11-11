@@ -7,6 +7,8 @@ const c = String.raw;
 
 export const watchdog: Exercise = {
   id: 'watchdog',
+  refs: ['IWDG.KR', 'IWDG.PR', 'IWDG.RLR', 'IWDG.SR', 'RCC.CSR'],
+  sources: ['rm'],
   title: 'Watchdog',
   summary: 'Recover automatically from a hung main loop',
   brief:
@@ -166,6 +168,8 @@ int main(void)
 
 export const uartEcho: Exercise = {
   id: 'uart',
+  refs: ['USART.CR1', 'USART.BRR', 'USART.ISR', 'USART.ICR', 'USART.RDR', 'USART.TDR', 'NVIC_EnableIRQ'],
+  sources: ['rm', 'ds'],
   title: 'UART ring buffer',
   summary: 'Receive bursts without losing bytes',
   brief:
@@ -342,6 +346,8 @@ int main(void)
 
 export const lowPower: Exercise = {
   id: 'low-power',
+  refs: ['__WFI', 'TIM.PSC', 'TIM.ARR', 'TIM.DIER'],
+  sources: ['pm', 'rm'],
   title: 'Sleep between events',
   summary: 'Blink at 1 Hz with the CPU asleep 95 % of the time',
   brief:
@@ -594,6 +600,8 @@ int main(void)
 
 export const cDrills: Exercise = {
   id: 'c-drills',
+  refs: ['GPIO.MODER', 'GPIO.BSRR'],
+  sources: ['rm'],
   title: 'C drills',
   summary: 'The whiteboard classics: bit tricks and a ring buffer',
   brief:

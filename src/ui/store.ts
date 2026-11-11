@@ -66,6 +66,8 @@ export interface AppState {
   dock: 'serial' | 'trace' | 'problems' | 'build';
   /** Pin highlighted across the views (hover). */
   hoverPin: string | null;
+  /** The reference drawer: which page is shown and which register is expanded. */
+  reference: { open: boolean; topic: string; reg: string | null; query: string };
   /** Request for the editor to jump to a location. */
   reveal: { file: string; line: number; nonce: number } | null;
   error: string | null;
@@ -115,6 +117,7 @@ let state: AppState = {
   details: prefs.details ?? false,
   dock: 'serial',
   hoverPin: null,
+  reference: { open: false, topic: 'guide', reg: null, query: '' },
   reveal: null,
   error: null,
 };
@@ -483,6 +486,12 @@ export const actions = {
       set({ viewing: { name: file, content: state.firmware[file], label: 'chip support file' }, reveal: { file, line, nonce: Date.now() } });
     }
   },
+  /** Open the reference at a page ("guide", "docs" or a peripheral id) and optionally at one register. */
+  openReference(topic: string = state.reference.topic, reg: string | null = null): void {
+    set({ reference: { open: true, topic, reg, query: '' } });
+  },
+  closeReference: () => set({ reference: { ...state.reference, open: false } }),
+  setReferenceQuery: (query: string) => set({ reference: { ...state.reference, query } }),
   clearSerial: () => set({ serial: '' }),
   dismissError: () => set({ error: null }),
 };

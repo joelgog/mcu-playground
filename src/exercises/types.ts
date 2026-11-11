@@ -39,6 +39,10 @@ export interface Exercise {
   brief: string;
   /** The technical background: what an interviewer is looking for. */
   background: string;
+  /** Registers and core functions this exercise is about: "RCC.AHBENR" or "NVIC_EnableIRQ". */
+  refs: string[];
+  /** Ids of the source documents worth opening for this exercise. */
+  sources: string[];
   /** Ids of the board devices fitted for this exercise. */
   devices: string[];
   deviceOptions?: Record<string, Record<string, number | string | boolean>>;

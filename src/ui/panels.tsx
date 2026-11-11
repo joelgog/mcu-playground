@@ -1,5 +1,7 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Exercise } from '../exercises';
+import { PERIPHERALS, registerDoc } from '../reference/registers';
+import { sourceById } from '../reference/sources';
 import { EXERCISES, SANDBOX, actions, useApp } from './store';
 import { Icon } from './App';
 
@@ -65,6 +67,35 @@ export function ExerciseBrief({ exercise }: { exercise: Exercise }) {
     <section className="brief">
       <div className="brief-task">
         <Prose text={exercise.brief} />
+      </div>
+      <div className="brief-refs">
+        <span className="brief-refs-label">Registers for this task</span>
+        {exercise.refs.map((ref) => {
+          const [periph, reg] = ref.split('.');
+          const found = reg ? registerDoc(periph, reg) : null;
+          const instance = PERIPHERALS.find((p) => p.id === periph)?.instances[0] ?? periph;
+          return (
+            <button
+              key={ref}
+              className="ref-chip"
+              title={found ? `${found.reg.title}: ${found.reg.what}` : 'Core function: open the reference'}
+              onClick={() => (found ? actions.openReference(periph, reg) : actions.openReference('docs', null))}
+            >
+              {found ? `${periph === 'GPIO' ? 'GPIOx' : periph === 'TIM' ? 'TIMx' : instance}->${reg}` : `${periph}()`}
+            </button>
+          );
+        })}
+        <span className="brief-refs-label brief-sources">
+          Documented in{' '}
+          {exercise.sources.map((id, i) => (
+            <Fragment key={id}>
+              {i > 0 && ', '}
+              <button className="brief-source" onClick={() => actions.openReference('docs', null)} title={sourceById(id).title}>
+                {sourceById(id).short}
+              </button>
+            </Fragment>
+          ))}
+        </span>
       </div>
       <button className="disclosure" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <span className={`caret${open ? ' open' : ''}`}>

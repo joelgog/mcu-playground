@@ -7,6 +7,8 @@ const c = String.raw;
 
 export const i2cSensor: Exercise = {
   id: 'i2c-sensor',
+  refs: ['GPIO.OTYPER', 'I2C.TIMINGR', 'I2C.CR1', 'I2C.CR2', 'I2C.ISR', 'I2C.ICR', 'I2C.RXDR', 'I2C.TXDR'],
+  sources: ['rm', 'i2c', 'tmp102'],
   title: 'I2C sensor',
   summary: 'Read a temperature register over I2C',
   brief:
@@ -181,6 +183,8 @@ int main(void)
 
 export const spiLeds: Exercise = {
   id: 'spi-shift-register',
+  refs: ['GPIO.AFR', 'SPI.CR1', 'SPI.CR2', 'SPI.SR', 'SPI.DR'],
+  sources: ['rm', 'hc595'],
   title: 'SPI shift register',
   summary: 'Drive eight LEDs through a 74HC595',
   brief:
@@ -350,6 +354,8 @@ int main(void)
 
 export const spiAccel: Exercise = {
   id: 'spi-accelerometer',
+  refs: ['SPI.CR1', 'SPI.CR2', 'SPI.SR', 'SPI.DR', 'GPIO.BSRR'],
+  sources: ['rm', 'lis3dh'],
   title: 'SPI accelerometer',
   summary: 'Identify a sensor and burst-read its registers',
   brief:

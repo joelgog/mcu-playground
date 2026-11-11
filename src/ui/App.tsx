@@ -3,6 +3,7 @@ import { actions, currentExercise, useApp, type OptLevel } from './store';
 import { BoardPanel } from './BoardPanel';
 import { CodeEditor, FileTabs } from './Editor';
 import { BuildPanel, ChecksPanel, ExerciseBrief, ExerciseList, ProblemsPanel, SerialPanel } from './panels';
+import { ReferencePanel } from './ReferencePanel';
 import { TracePanel } from './TracePanel';
 
 function fmtTime(sec: number): string {
@@ -37,6 +38,7 @@ function TopBar() {
   const opt = useApp((s) => s.opt);
   const speed = useApp((s) => s.speed);
   const exercise = useApp((s) => currentExercise(s));
+  const refOpen = useApp((s) => s.reference.open);
   const running = frame?.state === 'running';
   const loaded = !!frame && frame.state !== 'empty';
 
@@ -102,6 +104,14 @@ function TopBar() {
       </div>
 
       <div className="status">
+        <button
+          className={`btn${refOpen ? ' btn-active' : ''}`}
+          onClick={() => (refOpen ? actions.closeReference() : actions.openReference())}
+          title="Registers, bit fields and the documents they come from"
+          aria-pressed={refOpen}
+        >
+          <Icon name="book" /> Reference
+        </button>
         <StatusChip />
         {frame && (
           <>
@@ -123,7 +133,7 @@ function TopBar() {
   );
 }
 
-export function Icon({ name }: { name: 'play' | 'pause' | 'reset' | 'check' | 'cross' | 'dot' | 'plus' | 'chevron' | 'eye' }) {
+export function Icon({ name }: { name: 'play' | 'pause' | 'reset' | 'check' | 'cross' | 'dot' | 'plus' | 'chevron' | 'eye' | 'book' }) {
   const paths: Record<string, React.ReactNode> = {
     play: <path d="M5 3.5v9l7.5-4.5z" fill="currentColor" stroke="none" />,
     pause: <path d="M4.5 3.5v9M11.5 3.5v9" strokeWidth="2.2" />,
@@ -132,6 +142,7 @@ export function Icon({ name }: { name: 'play' | 'pause' | 'reset' | 'check' | 'c
     cross: <path d="M4 4l8 8M12 4l-8 8" />,
     dot: <circle cx="8" cy="8" r="3" />,
     plus: <path d="M8 3v10M3 8h10" />,
+    book: <path d="M2.5 3.2c2-.7 3.7-.5 5.5.7 1.8-1.2 3.500-1.400 5.500-.7v9c-2-.7-3.700-.5-5.500.7-1.800-1.200-3.500-1.400-5.500-.7zM8 3.900v9" />,
     chevron: <path d="M6 3.5L10.5 8 6 12.5" />,
     eye: (
       <>
@@ -215,6 +226,7 @@ export function App() {
           <Dock />
         </div>
         <div className="right">
+          <ReferencePanel />
           <BoardPanel />
           {exercise && <ChecksPanel exercise={exercise} />}
         </div>

@@ -7,6 +7,8 @@ const c = String.raw;
 
 export const exti: Exercise = {
   id: 'exti',
+  refs: ['RCC.APB2ENR', 'SYSCFG.EXTICR', 'EXTI.FTSR', 'EXTI.IMR', 'EXTI.PR', 'NVIC_EnableIRQ'],
+  sources: ['rm', 'pm'],
   title: 'External interrupt',
   summary: 'React to a button edge with EXTI instead of polling',
   brief:
@@ -120,6 +122,8 @@ int main(void)
 
 export const timerIrq: Exercise = {
   id: 'timer-irq',
+  refs: ['RCC.APB1ENR', 'TIM.PSC', 'TIM.ARR', 'TIM.EGR', 'TIM.DIER', 'TIM.SR', 'TIM.CR1', 'NVIC_EnableIRQ'],
+  sources: ['rm'],
   title: 'Timer interrupt',
   summary: 'Generate an exact 1 kHz square wave from a timer ISR',
   brief:
@@ -205,6 +209,8 @@ int main(void)
 
 export const pwmDim: Exercise = {
   id: 'pwm',
+  refs: ['GPIO.MODER', 'GPIO.AFR', 'TIM.PSC', 'TIM.ARR', 'TIM.CCR1', 'TIM.CCMR1', 'TIM.CCER'],
+  sources: ['rm', 'ds'],
   title: 'Hardware PWM',
   summary: 'Dim the on-board LED to 25 % with a timer channel',
   brief:
@@ -279,6 +285,8 @@ int main(void)
 
 export const servoPot: Exercise = {
   id: 'servo',
+  refs: ['ADC.CR', 'ADC.ISR', 'ADC.CHSELR', 'ADC.DR', 'GPIO.AFR', 'TIM.CCMR2', 'TIM.CCR1'],
+  sources: ['rm', 'ds'],
   title: 'ADC to servo',
   summary: 'Turn a servo with a potentiometer',
   brief:

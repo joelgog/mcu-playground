@@ -21,6 +21,8 @@ static void delay_ms(uint32_t ms)
 
 export const helloGpio: Exercise = {
   id: 'hello-gpio',
+  refs: ['RCC.AHBENR', 'GPIO.MODER', 'GPIO.ODR', 'GPIO.BSRR'],
+  sources: ['rm', 'um'],
   title: 'Hello GPIO',
   summary: 'Blink the on-board LED at 1 Hz',
   brief:
@@ -86,6 +88,8 @@ int main(void)
 
 export const bitMasks: Exercise = {
   id: 'bit-masks',
+  refs: ['RCC.AHBENR', 'GPIO.MODER', 'GPIO.IDR', 'GPIO.BSRR'],
+  sources: ['rm', 'um'],
   title: 'Bit masks and BSRR',
   summary: 'Drive an LED pattern from a button',
   brief:
@@ -181,6 +185,8 @@ int main(void)
 
 export const systickTimebase: Exercise = {
   id: 'systick',
+  refs: ['SysTick_Config', 'SysTick.CTRL', 'SysTick.LOAD', 'GPIO.ODR'],
+  sources: ['pm', 'arm'],
   title: 'SysTick time base',
   summary: 'Two LEDs at different rates without blocking',
   brief:
@@ -270,6 +276,8 @@ int main(void)
 
 export const debounce: Exercise = {
   id: 'debounce',
+  refs: ['GPIO.PUPDR', 'GPIO.IDR', 'SysTick_Config'],
+  sources: ['rm'],
   title: 'Debounce a button',
   summary: 'Count presses of a bouncy switch exactly once each',
   brief:

@@ -57,6 +57,8 @@
 
 * {
   box-sizing: border-box;
+  /* code must show the characters that are typed: no -> or != ligatures */
+  font-variant-ligatures: none;
 }
 
 html,
@@ -1611,4 +1613,371 @@ select {
   .checks-actions .btn-ghost {
     padding: 0 6px;
   }
+}
+
+/* ------------------------------------------------------------ reference */
+
+.btn-active {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+.right {
+  position: relative;
+}
+.reference {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+}
+.ref-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.ref-head h2 {
+  font-size: 14px;
+  font-weight: 650;
+}
+.ref-head input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--panel-2);
+}
+.ref-nav {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
+}
+.ref-nav button {
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+.ref-nav button:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+.ref-nav button.active {
+  background: var(--panel);
+  border-color: var(--line-strong);
+  color: var(--text);
+  font-weight: 600;
+}
+.ref-nav-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--line-strong);
+}
+.ref-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.ref-page {
+  padding: 14px 16px 28px;
+  max-width: 78ch;
+}
+.ref-page h3 {
+  font-size: 15px;
+  font-weight: 650;
+  margin: 4px 0 8px;
+}
+.ref-page section + section h3,
+.ref-doc + h3 {
+  margin-top: 26px;
+}
+.ref-page h4 {
+  font-size: 12px;
+  font-weight: 650;
+  margin: 12px 0 3px;
+  color: var(--muted);
+}
+.ref-page p {
+  margin-bottom: 8px;
+  line-height: 1.55;
+}
+.ref-sub {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 13px;
+  margin-left: 6px;
+}
+.ref-enable {
+  padding: 7px 10px;
+  border-left: 2px solid var(--accent);
+  background: var(--panel-2);
+}
+.ref-instances {
+  color: var(--muted);
+  font-size: 12px;
+}
+.ref-cite {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ref-cite a,
+.ref-doc a {
+  color: var(--accent-strong);
+}
+.ref-reg {
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  scroll-margin-top: 8px;
+}
+.ref-reg.open {
+  border-color: var(--line-strong);
+}
+.ref-reg-head {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 10px 4px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+.ref-c {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ref-reg-title {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+}
+.ref-offset {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
+}
+.ref-reg-what {
+  padding: 0 10px 8px 30px;
+  margin: 0 !important;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.ref-reg-body {
+  padding: 2px 12px 10px;
+}
+.bitstrip {
+  margin: 6px 0 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  overflow: hidden;
+  font-family: var(--mono);
+}
+.bitrow {
+  display: flex;
+}
+.bitrow + .bitrow {
+  border-top: 1px solid var(--line-strong);
+}
+.bitcell {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px 1px 3px;
+  border-left: 1px solid var(--line);
+  background: repeating-linear-gradient(135deg, transparent 0 4px, var(--panel-2) 4px 8px);
+  overflow: hidden;
+}
+.bitcell:first-child {
+  border-left: 0;
+}
+.bitcell.used {
+  background: var(--accent-bg);
+}
+.bitnum {
+  font-size: 9px;
+  color: var(--faint);
+}
+.bitname {
+  font-size: 9.5px;
+  min-height: 13px;
+  color: var(--accent-strong);
+  white-space: nowrap;
+}
+.ref-fields {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 12.5px;
+}
+.ref-fields th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.ref-fields td {
+  vertical-align: top;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--line);
+  line-height: 1.45;
+}
+.ref-fields td p {
+  margin: 0;
+}
+.mono {
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+.ref-macro {
+  color: var(--accent-strong);
+  word-break: break-all;
+}
+.ref-code {
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel-2);
+  font: 12px/1.55 var(--mono);
+  overflow-x: auto;
+}
+.ref-steps {
+  margin: 8px 0;
+  padding-left: 22px;
+}
+.ref-steps li {
+  margin-bottom: 10px;
+}
+.ref-steps li p {
+  margin: 2px 0 2px;
+}
+.ref-step-source {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ref-step-source button,
+.brief-source {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ref-doc {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.ref-doc h4 {
+  margin: 0 0 2px;
+  font-size: 13px;
+  color: var(--text);
+}
+.ref-doc-title {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ref-hit {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  text-align: left;
+}
+.ref-hit:hover {
+  border-color: var(--accent);
+}
+.ref-hit-why {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+}
+.ref-empty {
+  padding: 20px 16px;
+  color: var(--muted);
+}
+
+.brief-refs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin: 2px 0 6px;
+}
+.brief-refs-label {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-right: 2px;
+}
+.brief-sources {
+  margin-left: 6px;
+}
+.ref-chip {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 11px;
+  background: var(--panel);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.ref-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+/* register heading: expression and offset on the first line, title below */
+.ref-reg-head {
+  flex-wrap: wrap;
+}
+.ref-reg-head .ref-offset {
+  margin-left: auto;
+}
+.ref-reg-head .ref-reg-title {
+  order: 3;
+  flex: 0 0 100%;
+  padding-left: 22px;
+}
+.ref-body {
+  overflow-x: hidden;
+}
+.ref-fields .mono {
+  overflow-wrap: anywhere;
+}
+
+/* keep reference tables inside a narrow pane */
+.ref-fields td,
+.ref-fields th {
+  overflow-wrap: anywhere;
+}
+.ref-fields td code {
+  white-space: normal;
 }
