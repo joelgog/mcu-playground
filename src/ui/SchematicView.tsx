@@ -184,7 +184,7 @@ export function SchematicView({ specs }: { specs: DeviceSpec[] }) {
     });
 
     const labelY = first.y - 9;
-    const title = details ? `${spec.ref} · ${spec.label}` : spec.label;
+    const title = details ? `${spec.ref} · ${spec.label.replace('On-board button', 'Button')}` : spec.label;
 
     if (spec.kind === 'led') {
       const y = first.y;

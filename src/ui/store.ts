@@ -317,7 +317,7 @@ export const actions = {
 
   selectProject(projectId: string): void {
     if (projectId === state.projectId) return;
-    send({ type: 'pause' });
+    send({ type: 'unload' });
     traces.clear();
     set({
       projectId,

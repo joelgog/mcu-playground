@@ -13,6 +13,7 @@ export type ToWorker =
       autorun: boolean;
     }
   | { type: 'run' }
+  | { type: 'unload' }
   | { type: 'pause' }
   | { type: 'reset' }
   | { type: 'speed'; value: number }

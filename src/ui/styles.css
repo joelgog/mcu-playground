@@ -1260,8 +1260,8 @@ select {
   animation: flow 0.5s linear infinite;
 }
 .net.float .wire {
-  stroke: var(--faint);
-  stroke-dasharray: 1.5 3.5;
+  stroke: var(--muted);
+  stroke-dasharray: 2 3;
 }
 .net.short .wire {
   stroke: var(--danger);

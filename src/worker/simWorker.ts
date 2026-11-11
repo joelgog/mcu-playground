@@ -209,6 +209,11 @@ ctx.onmessage = (ev: MessageEvent<ToWorker>) => {
         running = false;
         dirty = true;
         break;
+      case 'unload':
+        running = false;
+        mcu = null;
+        board = null;
+        break;
       case 'reset':
         if (mcu) {
           fault = null;

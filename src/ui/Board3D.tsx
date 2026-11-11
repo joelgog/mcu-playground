@@ -288,7 +288,7 @@ function buildPart(spec: DeviceSpec): Part {
 function netColor(n: NetSnapshot | undefined): number {
   if (!n) return 0x2f6b55;
   if (n.contention) return 0xff4d3d;
-  if (n.floating) return 0x4d7a68;
+  if (n.floating) return 0x2a6650;
   if (n.v > 0.25 && n.v < 3.05) return 0xf0b03a;
   if (n.freq > 0.5 && n.duty > 0.001 && n.duty < 0.999) return 0x8dfad0;
   return n.level ? 0x43e8a8 : 0x2f6b55;
@@ -328,8 +328,11 @@ export default function Board3D({ specs }: { specs: DeviceSpec[] }) {
     controls.target.set(0, 0, 4);
     controls.enableDamping = true;
     controls.minDistance = 60;
-    controls.maxDistance = 520;
     controls.maxPolarAngle = Math.PI * 0.49;
+    let userMoved = false;
+    controls.addEventListener('start', () => {
+      userMoved = true;
+    });
 
     scene.add(new THREE.HemisphereLight(0xffffff, 0x445046, 1.5));
     const sun = new THREE.DirectionalLight(0xffffff, 2.0);
@@ -412,9 +415,16 @@ export default function Board3D({ specs }: { specs: DeviceSpec[] }) {
       renderer.domElement.style.width = `${w}px`;
       renderer.domElement.style.height = `${h}px`;
       camera.aspect = w / h;
-      // keep the whole board in view on narrow panels
-      camera.fov = w / h < 1 ? 52 : 38;
       camera.updateProjectionMatrix();
+      if (!userMoved) {
+        // Frame the whole board: far enough that its width and depth both fit.
+        const vHalf = (camera.fov * Math.PI) / 360;
+        const hHalf = Math.atan(Math.tan(vHalf) * camera.aspect);
+        const dist = Math.max((BOARD_W * 0.56) / Math.tan(hHalf), (BOARD_D * 0.62) / Math.tan(vHalf));
+        camera.position.set(0, dist * 0.8, dist * 0.6);
+        controls.maxDistance = dist * 2.2;
+        controls.update();
+      }
     };
     const ro = new ResizeObserver(resize);
     ro.observe(el);
