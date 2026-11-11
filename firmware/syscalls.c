@@ -29,7 +29,7 @@ static void console_init(void)
 int _write(int fd, const char *buf, int len)
 {
     (void)fd;
-    if (!(USART2->CR1 & USART_CR1_UE)) {
+    if (!(RCC->APB1ENR & RCC_APB1ENR_USART2EN) || !(USART2->CR1 & USART_CR1_UE)) {
         console_init();
     }
     for (int i = 0; i < len; i++) {
@@ -46,7 +46,7 @@ int _read(int fd, char *buf, int len)
     if (len <= 0) {
         return 0;
     }
-    if (!(USART2->CR1 & USART_CR1_UE)) {
+    if (!(RCC->APB1ENR & RCC_APB1ENR_USART2EN) || !(USART2->CR1 & USART_CR1_UE)) {
         console_init();
     }
     while (!(USART2->ISR & USART_ISR_RXNE)) {
