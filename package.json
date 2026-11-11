@@ -1,0 +1,39 @@
+{
+  "name": "mcu-playground",
+  "private": true,
+  "version": "0.1.0",
+  "description": "STM32F072 (Cortex-M0) simulator playground for embedded interview practice",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "toolchain": "xpm install"
+  },
+  "xpack": {
+    "devDependencies": {
+      "@xpack-dev-tools/arm-none-eabi-gcc": {
+        "specifier": "15.2.1-1.1.1",
+        "local": "link",
+        "platforms": "all"
+      }
+    }
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "monaco-editor": "^0.57.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0",
+    "xpm": "^0.23.3"
+  }
+}

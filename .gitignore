@@ -1,0 +1,7 @@
+node_modules/
+xpacks/
+dist/
+workspace/
+.build/
+*.log
+.DS_Store
