@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Exercise } from '../exercises';
+import { GROUPS } from '../exercises';
 import { PERIPHERALS, registerDoc } from '../reference/registers';
 import { sourceById } from '../reference/sources';
 import { EXERCISES, SANDBOX, actions, useApp } from './store';
@@ -26,8 +27,18 @@ export function ExerciseList() {
   const projectId = useApp((s) => s.projectId);
   const passed = useApp((s) => s.passed);
   const done = EXERCISES.filter((e) => passed[e.id]).length;
+  const number = new Map(EXERCISES.map((e, i) => [e.id, i + 1]));
   return (
     <nav className="sidebar" aria-label="Projects">
+      <button className="side-item side-help" onClick={() => actions.openReference('app', null)} title="A two-minute tour of the playground">
+        <span className="side-mark side-mark-help" aria-hidden="true">
+          ?
+        </span>
+        <span className="side-text">
+          <span className="side-title">How it works</span>
+          <span className="side-sub">Two-minute tour of the app</span>
+        </span>
+      </button>
       <button className={`side-item side-sandbox${projectId === SANDBOX ? ' active' : ''}`} onClick={() => actions.selectProject(SANDBOX)} title="Sandbox: full board, your own code">
         <span className="side-mark side-mark-sandbox" aria-hidden="true">
           S
@@ -42,16 +53,21 @@ export function ExerciseList() {
         </span>
       </div>
       <div className="side-scroll">
-        {EXERCISES.map((e, i) => (
-          <button key={e.id} className={`side-item${projectId === e.id ? ' active' : ''}`} onClick={() => actions.selectProject(e.id)} title={`${e.title}: ${e.summary}`}>
-            <span className={`side-mark${passed[e.id] ? ' done' : ''}`} aria-label={passed[e.id] ? 'done' : 'not done'}>
-              {passed[e.id] ? <Icon name="check" /> : i + 1}
-            </span>
-            <span className="side-text">
-              <span className="side-title">{e.title}</span>
-              <span className="side-sub">{e.summary}</span>
-            </span>
-          </button>
+        {GROUPS.map((g) => (
+          <Fragment key={g.title}>
+            <div className="side-group">{g.title}</div>
+            {EXERCISES.filter((e) => g.ids.includes(e.id)).map((e) => (
+              <button key={e.id} className={`side-item${projectId === e.id ? ' active' : ''}`} onClick={() => actions.selectProject(e.id)} title={`${e.title}: ${e.summary}`}>
+                <span className={`side-mark${passed[e.id] ? ' done' : ''}`} aria-label={passed[e.id] ? 'done' : 'not done'}>
+                  {passed[e.id] ? <Icon name="check" /> : number.get(e.id)}
+                </span>
+                <span className="side-text">
+                  <span className="side-title">{e.title}</span>
+                  <span className="side-sub">{e.summary}</span>
+                </span>
+              </button>
+            ))}
+          </Fragment>
         ))}
       </div>
     </nav>
@@ -60,31 +76,36 @@ export function ExerciseList() {
 
 // ---------------------------------------------------------- exercise brief
 
+/** A register ("RCC.AHBENR") or core function ("NVIC_EnableIRQ") as a chip that opens its reference entry. */
+export function RefChip({ id }: { id: string }) {
+  const [periph, reg] = id.split('.');
+  const found = reg ? registerDoc(periph, reg) : null;
+  const instance = PERIPHERALS.find((p) => p.id === periph)?.instances[0] ?? periph;
+  return (
+    <button
+      className="ref-chip"
+      title={found ? `${found.reg.title}: ${found.reg.what}` : 'Core function: open the reference'}
+      onClick={() => (found ? actions.openReference(periph, reg) : actions.openReference('docs', null))}
+    >
+      {found ? `${periph === 'GPIO' ? 'GPIOx' : periph === 'TIM' ? 'TIMx' : instance}->${reg}` : periph.startsWith('System') ? periph : `${periph}()`}
+    </button>
+  );
+}
+
 export function ExerciseBrief({ exercise }: { exercise: Exercise }) {
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [exercise.id]);
   return (
     <section className="brief">
       <div className="brief-task">
+        <span className="brief-label">Your task</span>
         <Prose text={exercise.brief} />
       </div>
       <div className="brief-refs">
         <span className="brief-refs-label">Registers for this task</span>
-        {exercise.refs.map((ref) => {
-          const [periph, reg] = ref.split('.');
-          const found = reg ? registerDoc(periph, reg) : null;
-          const instance = PERIPHERALS.find((p) => p.id === periph)?.instances[0] ?? periph;
-          return (
-            <button
-              key={ref}
-              className="ref-chip"
-              title={found ? `${found.reg.title}: ${found.reg.what}` : 'Core function: open the reference'}
-              onClick={() => (found ? actions.openReference(periph, reg) : actions.openReference('docs', null))}
-            >
-              {found ? `${periph === 'GPIO' ? 'GPIOx' : periph === 'TIM' ? 'TIMx' : instance}->${reg}` : `${periph}()`}
-            </button>
-          );
-        })}
+        {exercise.refs.map((ref) => (
+          <RefChip key={ref} id={ref} />
+        ))}
         <span className="brief-refs-label brief-sources">
           Documented in{' '}
           {exercise.sources.map((id, i) => (
@@ -97,12 +118,17 @@ export function ExerciseBrief({ exercise }: { exercise: Exercise }) {
           ))}
         </span>
       </div>
-      <button className="disclosure" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        <span className={`caret${open ? ' open' : ''}`}>
-          <Icon name="chevron" />
-        </span>
-        What an interviewer is looking for
-      </button>
+      <div className="brief-actions">
+        <button className="btn btn-small btn-help" onClick={() => actions.openSolution(false)} title="The solution in steps: the reason for each step first, the code only when you ask for it">
+          <Icon name="steps" /> Step-by-step help
+        </button>
+        <button className="disclosure" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          <span className={`caret${open ? ' open' : ''}`}>
+            <Icon name="chevron" />
+          </span>
+          What an interviewer is looking for
+        </button>
+      </div>
       {open && (
         <div className="brief-background">
           <Prose text={exercise.background} />
@@ -117,11 +143,10 @@ export function ExerciseBrief({ exercise }: { exercise: Exercise }) {
 export function ChecksPanel({ exercise }: { exercise: Exercise }) {
   const check = useApp((s) => s.checks[exercise.id]);
   const passed = useApp((s) => !!s.passed[exercise.id]);
-  const viewingSolution = useApp((s) => s.viewing?.label === 'reference solution');
+  const solutionOpen = useApp((s) => s.solution.open);
   const status = check?.status ?? 'idle';
   const results = check?.results ?? [];
   const allPass = status === 'done' && results.length > 0 && results.every((r) => r.pass);
-  const solutionFile = Object.keys(exercise.solution)[0];
 
   return (
     <section className="checks">
@@ -130,14 +155,15 @@ export function ChecksPanel({ exercise }: { exercise: Exercise }) {
         <div className="checks-actions">
           <button
             className="btn btn-small btn-ghost"
+            title="The model solution with an explanation of every step"
             onClick={() => {
-              if (viewingSolution) actions.openFile(solutionFile);
-              else if (passed || window.confirm('Show the reference solution? You learn the most by trying first.')) {
-                actions.viewReadOnly(solutionFile, exercise.solution[solutionFile], 'reference solution');
+              if (solutionOpen) actions.closeSolution();
+              else if (passed || window.confirm('Show the complete solution? "Step-by-step help" above the editor gives hints first and keeps the code folded.')) {
+                actions.openSolution(true);
               }
             }}
           >
-            {viewingSolution ? 'Hide solution' : 'Show solution'}
+            {solutionOpen ? 'Hide solution' : 'Show solution'}
           </button>
           <button
             className="btn btn-small btn-ghost"
@@ -175,7 +201,15 @@ export function ChecksPanel({ exercise }: { exercise: Exercise }) {
           ))}
         </ul>
       )}
-      {allPass && <p className="checks-done">All checks pass. Open "What an interviewer is looking for" and make sure you could explain each point out loud.</p>}
+      {allPass && (
+        <p className="checks-done">
+          All checks pass. Now compare with the{' '}
+          <button className="brief-source" onClick={() => actions.openSolution(true)}>
+            model solution
+          </button>{' '}
+          and practise the "How to say it in an interview" answer out loud.
+        </p>
+      )}
     </section>
   );
 }

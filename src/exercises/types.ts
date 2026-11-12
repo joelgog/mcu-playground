@@ -30,6 +30,34 @@ export interface CheckContext {
 
 export type OptLevel = 'O0' | 'Og' | 'O1' | 'O2' | 'Os';
 
+/** One step of the explained model solution. */
+export interface SolutionStep {
+  /** What the step achieves, as a short heading. */
+  title: string;
+  /** Why the step is needed. Shown before the code, so it doubles as a hint. */
+  why: string;
+  /**
+   * The lines of the reference solution that do it, copied verbatim (indentation aside).
+   * A line holding only "..." separates two passages that are not adjacent in the file.
+   */
+  code: string;
+  /** How the code works, read line by line. */
+  how: string;
+  /** Registers and core functions used in this step: "RCC.AHBENR" or "NVIC_EnableIRQ". */
+  refs?: string[];
+}
+
+/** The model solution of an exercise, explained. */
+export interface Walkthrough {
+  /** The idea of the solution in a few sentences, before any code. */
+  idea: string;
+  steps: SolutionStep[];
+  /** Typical mistakes and what you observe when you make them. */
+  mistakes: Array<{ mistake: string; result: string }>;
+  /** How to explain the solution out loud in an interview. */
+  say: string;
+}
+
 export interface Exercise {
   id: string;
   title: string;

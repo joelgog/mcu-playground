@@ -178,3 +178,75 @@ export const GUIDE: GuideSection[] = [
     ],
   },
 ];
+
+/** A short tour of the app itself, shown on the first visit and under "How it works". */
+export const APP_GUIDE: GuideSection[] = [
+  {
+    id: 'tour',
+    title: 'How the playground works',
+    blocks: [
+      {
+        type: 'p',
+        text:
+          'You write C for a real microcontroller, an STM32F072 with an ARM Cortex-M0 core. Your code is compiled with the real ARM compiler and the result runs, instruction by instruction, on a simulated chip in your browser. ' +
+          'The registers, the interrupts and the timing behave as on the real part, so what you practise here carries over to real hardware.',
+      },
+      {
+        type: 'steps',
+        items: [
+          {
+            title: 'Pick an exercise on the left',
+            text: 'They are ordered from easy to hard. Start with Hello GPIO. The Sandbox at the top has the full board and no task, for your own experiments.',
+          },
+          {
+            title: 'Read the task above the editor',
+            text: 'It says what to build and on which pins. The chips under it are the registers you will need: click one to see what it does, bit by bit, and where it is documented.',
+          },
+          {
+            title: 'Write the code',
+            text: 'The starter marks every gap with a TODO. Hover any register or bit name for a short explanation, press F1 on it for the full entry, or type `RCC->` to choose from a list.',
+          },
+          {
+            title: 'Build and run (Ctrl+Enter)',
+            text: 'The board on the right comes alive: LEDs light, the servo turns, the serial console prints. Click the buttons and move the sliders to feed inputs to your program. Devices, Schematic and 3D board are three views of the same circuit.',
+          },
+          {
+            title: 'Run checks',
+            text: 'The checks start your program on a fresh board, press buttons and set sensor values by script, and measure what the pins do. Each line tells you what was measured, so a failed check says what is wrong.',
+          },
+          {
+            title: 'Stuck? Ask for the next step, not the answer',
+            text: 'Step-by-step help, under the task, lists what has to happen and why. The code of each step stays folded until you open it. Show solution, next to the checks, opens everything at once and can run the model solution on the board.',
+          },
+          {
+            title: 'Be able to say it',
+            text: 'Every solution ends with common mistakes and a short spoken answer. An interview tests whether you can explain the code, so read "What an interviewer is looking for" and say the answer out loud.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'panels',
+    title: 'What the panels are for',
+    blocks: [
+      {
+        type: 'table',
+        head: ['Panel', 'Use it to'],
+        rows: [
+          ['Serial console', 'See what `printf()` and USART2 send, and type text to the chip.'],
+          ['Pin trace', 'Watch pins over time like a logic analyser, with frequency and duty cycle. Click a wire in the schematic to add its pin.'],
+          ['Hints', 'Read why something silently does nothing: a peripheral without a clock, a floating input, an interrupt flag that is never cleared. Real hardware gives no such message.'],
+          ['Build output', 'See compiler errors and warnings. Click one to jump to the line.'],
+          ['Pin setup', 'Choose a mode for each pin and get the register code for it, with the reasons, as a vendor pin configurator does.'],
+          ['Reference', 'Look up every simulated register, the method for finding registers in the manuals, and the source documents.'],
+        ],
+      },
+      {
+        type: 'p',
+        text:
+          'The Speed menu slows the simulation down to watch fast signals or runs it as fast as possible. The Optimise menu selects the compiler optimisation level: `-O2` is what release builds use, and it exposes bugs such as a missing `volatile`.',
+      },
+    ],
+  },
+];

@@ -3,7 +3,7 @@
  * documents, and a bit-level description of every simulated register.
  */
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { GUIDE, type Block } from '../reference/guide';
+import { APP_GUIDE, GUIDE, type Block, type GuideSection } from '../reference/guide';
 import { PERIPHERALS, SYMBOLS, type Field, type PeripheralDoc, type RegisterDoc } from '../reference/registers';
 import { SOURCES, sourceById } from '../reference/sources';
 import { Icon } from './App';
@@ -111,28 +111,23 @@ function RegisterCard({ periph, reg, open }: { periph: PeripheralDoc; reg: Regis
           <p>
             <Rich text={reg.why} />
           </p>
-          <table className="ref-fields">
-            <thead>
-              <tr>
-                <th>Bits</th>
-                <th>Field</th>
-                <th>In C</th>
-                <th>Meaning</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reg.fields.map((fd) => (
-                <tr key={fd.name + fd.bits}>
-                  <td className="mono">{fd.bits}</td>
-                  <td className="mono">{fd.name}</td>
-                  <td className="mono ref-macro">{fd.macro ?? '(1u << n)'}</td>
-                  <td>
-                    <Rich text={fd.desc} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <h4>Fields</h4>
+          <ul className="ref-fieldlist">
+            {reg.fields.map((fd) => (
+              <li key={fd.name + fd.bits}>
+                <div className="ref-field-head">
+                  <span className="ref-field-bits">{/^\d+$/.test(fd.bits) ? `bit ${fd.bits}` : `bits ${fd.bits}`}</span>
+                  <span className="ref-field-name">{fd.name}</span>
+                  <span className="ref-field-macro" title="The name of this field in C">
+                    {fd.macro ?? '(1u << n)'}
+                  </span>
+                </div>
+                <p>
+                  <Rich text={fd.desc} />
+                </p>
+              </li>
+            ))}
+          </ul>
           <Cite doc={periph.source.doc} chapter={periph.source.chapter} extra={`register ${manualName(periph, reg)}`} />
         </div>
       )}
@@ -167,19 +162,37 @@ function PeripheralPage({ periph, openReg }: { periph: PeripheralDoc; openReg: s
 const CODE_TOKEN = /(`[^`]+`|\b[A-Za-z_]\w*->\w+(?:\[\d\])?|\b[A-Z][A-Za-z0-9]*_[A-Z0-9][A-Za-z0-9_]*\b|\b0x[0-9A-Fa-f]+\b|\b[A-Za-z_]\w*\(\))/g;
 
 /** Inline text in which code is set in a code font, whether or not it was marked with backticks. */
-function Rich({ text }: { text: string }) {
+export function Rich({ text }: { text: string }) {
+  // Find the code tokens, then join neighbours that are only separated by operators,
+  // so that a whole expression such as "REG = (REG & ~MASK) | VALUE" is set as one piece.
+  const spans: Array<{ start: number; end: number; code: string }> = [];
+  for (const m of text.matchAll(CODE_TOKEN)) {
+    const token = m[0].startsWith('`') ? m[0].slice(1, -1) : m[0];
+    const prev = spans[spans.length - 1];
+    const glue = prev ? text.slice(prev.end, m.index) : '';
+    if (prev && !m[0].startsWith('`') && glue.length <= 8 && OPERATOR_GLUE.test(glue)) {
+      prev.code += glue + token;
+      prev.end = m.index + m[0].length;
+    } else spans.push({ start: m.index, end: m.index + m[0].length, code: token });
+  }
   const parts: ReactNode[] = [];
   let last = 0;
-  let key = 0;
-  for (const m of text.matchAll(CODE_TOKEN)) {
-    if (m.index > last) parts.push(text.slice(last, m.index));
-    const token = m[0].startsWith('`') ? m[0].slice(1, -1) : m[0];
-    parts.push(<code key={key++}>{token}</code>);
-    last = m.index + m[0].length;
-  }
+  spans.forEach((s, i) => {
+    // a closing parenthesis right after an expression that opened one belongs to it
+    if (text[s.end] === ')' && (s.code.match(/\(/g)?.length ?? 0) > (s.code.match(/\)/g)?.length ?? 0)) {
+      s.code += ')';
+      s.end++;
+    }
+    if (s.start > last) parts.push(text.slice(last, s.start));
+    parts.push(<code key={i}>{s.code}</code>);
+    last = s.end;
+  });
   if (last < text.length) parts.push(text.slice(last));
   return <>{parts}</>;
 }
+
+/** Text between two code tokens that makes them one expression: operators, spaces and parentheses only. */
+const OPERATOR_GLUE = /^[\s()]*(?:[=|&^~+*-]|<<|>>)[=|&^~<>+*()\s-]*$/;
 
 function GuideBlock({ block }: { block: Block }) {
   switch (block.type) {
@@ -229,10 +242,10 @@ function GuideBlock({ block }: { block: Block }) {
   }
 }
 
-function GuidePage() {
+function GuidePage({ sections }: { sections: GuideSection[] }) {
   return (
     <div className="ref-page">
-      {GUIDE.map((s) => (
+      {sections.map((s) => (
         <section key={s.id} className="ref-guide">
           <h3>{s.title}</h3>
           {s.blocks.map((b, i) => (
@@ -329,8 +342,11 @@ export function ReferencePanel() {
         </button>
       </header>
       <nav className="ref-nav" aria-label="Reference sections">
+        <button className={ref.topic === 'app' && !ref.query ? 'active' : ''} onClick={() => actions.openReference('app', null)}>
+          Using the app
+        </button>
         <button className={ref.topic === 'guide' && !ref.query ? 'active' : ''} onClick={() => actions.openReference('guide', null)}>
-          Start here
+          Finding registers
         </button>
         <button className={ref.topic === 'docs' && !ref.query ? 'active' : ''} onClick={() => actions.openReference('docs', null)}>
           Documents
@@ -343,7 +359,7 @@ export function ReferencePanel() {
         ))}
       </nav>
       <div className="ref-body" ref={body}>
-        {ref.query.trim() ? <SearchResults query={ref.query} /> : periph ? <PeripheralPage periph={periph} openReg={ref.reg} /> : ref.topic === 'docs' ? <DocsPage /> : <GuidePage />}
+        {ref.query.trim() ? <SearchResults query={ref.query} /> : periph ? <PeripheralPage periph={periph} openReg={ref.reg} /> : ref.topic === 'docs' ? <DocsPage /> : <GuidePage sections={ref.topic === 'app' ? APP_GUIDE : GUIDE} />}
       </div>
     </aside>
   );

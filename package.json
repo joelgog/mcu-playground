@@ -2,7 +2,7 @@
   "name": "mcu-playground",
   "private": true,
   "version": "0.1.0",
-  "description": "STM32F072 (Cortex-M0) simulator playground for embedded interview practice",
+  "description": "Practise embedded C on a simulated STM32F072 (Cortex-M0): real compiler, auto-checked exercises, explained solutions",
   "type": "module",
   "scripts": {
     "dev": "vite",

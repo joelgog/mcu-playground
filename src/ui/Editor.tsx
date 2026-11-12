@@ -195,6 +195,11 @@ function modelFor(scope: string, name: string, content: string): monaco.editor.I
   return model;
 }
 
+/** C source as syntax-coloured HTML in the editor's current theme. */
+export function colorize(code: string): Promise<string> {
+  return monaco.editor.colorize(code, 'c', { tabSize: 4 });
+}
+
 export function CodeEditor() {
   const host = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -207,6 +212,7 @@ export function CodeEditor() {
   const content = useApp((s) => projectFiles(s)[s.activeFile] ?? '');
   const diagnostics = useApp((s) => s.build.diagnostics);
   const reveal = useApp((s) => s.reveal);
+  const pendingEdit = useApp((s) => s.pendingEdit);
   const fault = useApp((s) => s.fault);
   const locations = useApp((s) => s.locations);
 
@@ -279,6 +285,20 @@ export function CodeEditor() {
     }
     suppress.current = false;
   }, [projectId, activeFile, viewing, content]);
+
+  // A tool rewrote a file: apply it as an ordinary edit, so Ctrl+Z brings the old text back.
+  useEffect(() => {
+    const editor = editorRef.current;
+    const model = editor?.getModel();
+    if (!editor || !model || !pendingEdit) return;
+    if (model.uri.path.split('/').pop() !== pendingEdit.file || editor.getOption(monaco.editor.EditorOption.readOnly)) return;
+    if (model.getValue() === pendingEdit.content) return;
+    editor.pushUndoStop();
+    editor.executeEdits('mcu-tool', [{ range: model.getFullModelRange(), text: pendingEdit.content }]);
+    editor.pushUndoStop();
+    const at = model.findMatches('static void pins_init(void)', false, false, true, null, false)[0];
+    if (at) editor.revealLineInCenter(at.range.startLineNumber);
+  }, [pendingEdit]);
 
   // Compiler diagnostics as squiggles.
   useEffect(() => {

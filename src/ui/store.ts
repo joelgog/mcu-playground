@@ -5,6 +5,7 @@
 import { useSyncExternalStore } from 'react';
 import type { DeviceSpec } from '../board/devices';
 import { EXERCISES, exerciseById, type CheckResult, type Exercise } from '../exercises';
+import { applyToSource, generate, type PinConfig } from '../pinconfig/generate';
 import type { FaultReport, Frame, FromWorker, HintReport, ToWorker } from '../worker/protocol';
 import { SANDBOX_MAIN } from './sandbox';
 
@@ -33,6 +34,8 @@ export interface BuildState {
   buildId: string | null;
   /** Project the last successful build belongs to. */
   projectId: string | null;
+  /** True while the firmware on the board is the reference solution, not the user's code. */
+  solution: boolean;
 }
 
 export interface CheckState {
@@ -68,6 +71,12 @@ export interface AppState {
   hoverPin: string | null;
   /** The reference drawer: which page is shown and which register is expanded. */
   reference: { open: boolean; topic: string; reg: string | null; query: string };
+  /** The explained-solution drawer. With revealAll the code of every step is shown. */
+  solution: { open: boolean; revealAll: boolean };
+  /** The pin setup tool: its drawer and the pins configured so far. */
+  pinTool: { open: boolean; pins: Record<string, PinConfig>; selected: string | null };
+  /** Request for the editor to replace the text of a file (kept on its undo stack). */
+  pendingEdit: { file: string; content: string; nonce: number } | null;
   /** Request for the editor to jump to a location. */
   reveal: { file: string; line: number; nonce: number } | null;
   error: string | null;
@@ -103,7 +112,7 @@ let state: AppState = {
   firmware: {},
   opt: prefs.opt ?? 'Og',
   speed: 1,
-  build: { status: 'idle', log: '', diagnostics: [], size: null, buildId: null, projectId: null },
+  build: { status: 'idle', log: '', diagnostics: [], size: null, buildId: null, projectId: null, solution: false },
   frame: null,
   specs: [],
   serial: '',
@@ -118,6 +127,9 @@ let state: AppState = {
   dock: 'serial',
   hoverPin: null,
   reference: { open: false, topic: 'guide', reg: null, query: '' },
+  solution: { open: false, revealAll: false },
+  pinTool: { open: false, pins: {}, selected: null },
+  pendingEdit: null,
   reveal: null,
   error: null,
 };
@@ -311,6 +323,11 @@ export const actions = {
       const cleaned: Record<string, Record<string, string>> = {};
       for (const [id, files] of Object.entries(projects)) if (Object.keys(files).length) cleaned[id] = files;
       set({ ready: true, toolchain: status.toolchain, projects: cleaned, firmware });
+      // first visit: open the short guide to the app
+      if (!loadJson<boolean>('mcu-welcomed', false)) {
+        saveJson('mcu-welcomed', true);
+        set({ reference: { open: true, topic: 'app', reg: null, query: '' } });
+      }
     } catch (e) {
       set({ ready: true, error: `Could not reach the local dev server API: ${e instanceof Error ? e.message : e}` });
     }
@@ -325,7 +342,8 @@ export const actions = {
     set({
       projectId,
       viewing: null,
-      build: { status: 'idle', log: '', diagnostics: [], size: null, buildId: null, projectId: null },
+      solution: { open: false, revealAll: false },
+      build: { status: 'idle', log: '', diagnostics: [], size: null, buildId: null, projectId: null, solution: false },
       frame: null,
       specs: [],
       serial: '',
@@ -379,24 +397,26 @@ export const actions = {
     scheduleSave(state.projectId);
   },
 
-  async buildAndRun(): Promise<void> {
+  /** Compile and start the user's code, or the given files in its place (the reference solution). */
+  async buildAndRun(override?: Record<string, string>): Promise<void> {
     if (state.build.status === 'building') return;
     const ex = currentExercise();
     const projectId = state.projectId;
+    const solution = !!override;
     set({ build: { ...state.build, status: 'building', log: '', diagnostics: [] } });
     try {
-      const res = await compile({ ...ex?.support, ...projectFiles() }, state.opt);
+      const res = await compile({ ...ex?.support, ...(override ?? projectFiles()) }, state.opt);
       if (state.projectId !== projectId) return;
       if (!res.ok || !res.elf) {
         set({
-          build: { status: 'error', log: res.log, diagnostics: res.diagnostics, size: null, buildId: null, projectId },
+          build: { status: 'error', log: res.log, diagnostics: res.diagnostics, size: null, buildId: null, projectId, solution },
           dock: 'build',
         });
         return;
       }
       traces.clear();
       set({
-        build: { status: 'ok', log: res.log, diagnostics: res.diagnostics, size: res.size, buildId: res.buildId, projectId },
+        build: { status: 'ok', log: res.log, diagnostics: res.diagnostics, size: res.size, buildId: res.buildId, projectId, solution },
         hints: [],
         fault: null,
         locations: {},
@@ -421,7 +441,7 @@ export const actions = {
       const res = await compile({ ...ex.support, ...projectFiles() }, ex.opt ?? state.opt);
       if (!res.ok || !res.elf) {
         set({
-          build: { status: 'error', log: res.log, diagnostics: res.diagnostics, size: null, buildId: null, projectId: ex.id },
+          build: { status: 'error', log: res.log, diagnostics: res.diagnostics, size: null, buildId: null, projectId: ex.id, solution: false },
           dock: 'build',
         });
         setCheck({ status: 'build-error', results: [] });
@@ -486,7 +506,67 @@ export const actions = {
       set({ viewing: { name: file, content: state.firmware[file], label: 'chip support file' }, reveal: { file, line, nonce: Date.now() } });
     }
   },
-  /** Open the reference at a page ("guide", "docs" or a peripheral id) and optionally at one register. */
+  // ---- explained solution
+
+  /** Open the step-by-step solution. With revealAll the code of every step is visible at once. */
+  openSolution(revealAll: boolean): void {
+    set({ solution: { open: true, revealAll }, reference: { ...state.reference, open: false }, pinTool: { ...state.pinTool, open: false } });
+  },
+  closeSolution: () => set({ solution: { ...state.solution, open: false } }),
+  setSolutionReveal: (revealAll: boolean) => set({ solution: { ...state.solution, revealAll } }),
+
+  /** Show the complete reference solution read-only in the editor. */
+  viewSolution(): void {
+    const ex = currentExercise();
+    if (!ex) return;
+    const file = Object.keys(ex.solution)[0];
+    set({ viewing: { name: file, content: ex.solution[file], label: 'reference solution' } });
+  },
+
+  /** Build the reference solution and run it on the board, without touching the user's files. */
+  async runSolution(): Promise<void> {
+    const ex = currentExercise();
+    if (!ex) return;
+    actions.viewSolution();
+    await actions.buildAndRun(ex.solution);
+  },
+
+  /** Replace the user's files with the reference solution, to experiment with working code. */
+  adoptSolution(): void {
+    const ex = currentExercise();
+    if (!ex) return;
+    const files = { ...projectFiles(), ...ex.solution };
+    const first = Object.keys(ex.solution)[0];
+    set({ projects: { ...state.projects, [state.projectId]: files }, activeFile: first, viewing: null });
+    scheduleSave(state.projectId);
+  },
+
+  // ---- pin setup tool
+
+  openPinTool(): void {
+    set({ pinTool: { ...state.pinTool, open: true }, reference: { ...state.reference, open: false }, solution: { ...state.solution, open: false } });
+  },
+  closePinTool: () => set({ pinTool: { ...state.pinTool, open: false } }),
+  selectPin: (pin: string | null) => set({ pinTool: { ...state.pinTool, selected: pin } }),
+  /** Add, change or (with null) remove the setting of one pin. */
+  setPin(pin: string, config: PinConfig | null): void {
+    const pins = { ...state.pinTool.pins };
+    if (config) pins[pin] = config;
+    else delete pins[pin];
+    set({ pinTool: { ...state.pinTool, pins } });
+  },
+  clearPins: () => set({ pinTool: { ...state.pinTool, pins: {}, selected: null } }),
+
+  /** Write the generated pins_init() into the file that holds main() (or the open file). */
+  applyPinSetup(): string {
+    const files = projectFiles();
+    const file = Object.keys(files).find((f) => /\bint\s+main\s*\(/.test(files[f])) ?? state.activeFile;
+    const content = applyToSource(files[file] ?? '', generate(Object.values(state.pinTool.pins)));
+    set({ activeFile: file, viewing: null, pendingEdit: { file, content, nonce: Date.now() } });
+    return file;
+  },
+
+  /** Open the reference at a page ("app", "guide", "docs" or a peripheral id) and optionally at one register. */
   openReference(topic: string = state.reference.topic, reg: string | null = null): void {
     set({ reference: { open: true, topic, reg, query: '' } });
   },

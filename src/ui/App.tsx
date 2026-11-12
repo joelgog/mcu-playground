@@ -3,7 +3,9 @@ import { actions, currentExercise, useApp, type OptLevel } from './store';
 import { BoardPanel } from './BoardPanel';
 import { CodeEditor, FileTabs } from './Editor';
 import { BuildPanel, ChecksPanel, ExerciseBrief, ExerciseList, ProblemsPanel, SerialPanel } from './panels';
+import { PinTool } from './PinTool';
 import { ReferencePanel } from './ReferencePanel';
+import { SolutionPanel } from './SolutionPanel';
 import { TracePanel } from './TracePanel';
 
 function fmtTime(sec: number): string {
@@ -20,6 +22,7 @@ function StatusChip() {
   const frame = useApp((s) => s.frame);
   const build = useApp((s) => s.build.status);
   const fault = useApp((s) => s.fault);
+  const solution = useApp((s) => s.build.solution);
   if (build === 'building') return <span className="chip chip-info">Building…</span>;
   if (!frame) return <span className="chip">Not running</span>;
   if (fault && frame.state !== 'running') return <span className="chip chip-danger">Stopped at a fault</span>;
@@ -29,7 +32,11 @@ function StatusChip() {
   }
   if (frame.state === 'paused') return <span className="chip chip-warn">Paused</span>;
   const mode = frame.cpu.ipsr !== 0 ? 'in interrupt' : frame.cpu.sleepFrac > 0.5 ? `asleep ${Math.round(frame.cpu.sleepFrac * 100)} %` : 'running';
-  return <span className="chip chip-ok">{mode}</span>;
+  return (
+    <span className="chip chip-ok" title={solution ? 'The reference solution is on the board, not your code. Build and run switches back.' : undefined}>
+      {solution ? `solution ${mode}` : mode}
+    </span>
+  );
 }
 
 function TopBar() {
@@ -39,6 +46,7 @@ function TopBar() {
   const speed = useApp((s) => s.speed);
   const exercise = useApp((s) => currentExercise(s));
   const refOpen = useApp((s) => s.reference.open);
+  const pinsOpen = useApp((s) => s.pinTool.open);
   const running = frame?.state === 'running';
   const loaded = !!frame && frame.state !== 'empty';
 
@@ -105,12 +113,20 @@ function TopBar() {
 
       <div className="status">
         <button
+          className={`btn${pinsOpen ? ' btn-active' : ''}`}
+          onClick={() => (pinsOpen ? actions.closePinTool() : actions.openPinTool())}
+          title="Choose a mode for each pin and get the register code for it"
+          aria-pressed={pinsOpen}
+        >
+          <Icon name="pins" /> <span className="btn-label">Pin setup</span>
+        </button>
+        <button
           className={`btn${refOpen ? ' btn-active' : ''}`}
           onClick={() => (refOpen ? actions.closeReference() : actions.openReference())}
           title="Registers, bit fields and the documents they come from"
           aria-pressed={refOpen}
         >
-          <Icon name="book" /> Reference
+          <Icon name="book" /> <span className="btn-label">Reference</span>
         </button>
         <StatusChip />
         {frame && (
@@ -133,7 +149,7 @@ function TopBar() {
   );
 }
 
-export function Icon({ name }: { name: 'play' | 'pause' | 'reset' | 'check' | 'cross' | 'dot' | 'plus' | 'chevron' | 'eye' | 'book' }) {
+export function Icon({ name }: { name: 'play' | 'pause' | 'reset' | 'check' | 'cross' | 'dot' | 'plus' | 'chevron' | 'eye' | 'book' | 'steps' | 'pins' }) {
   const paths: Record<string, React.ReactNode> = {
     play: <path d="M5 3.5v9l7.5-4.5z" fill="currentColor" stroke="none" />,
     pause: <path d="M4.5 3.5v9M11.5 3.5v9" strokeWidth="2.2" />,
@@ -144,6 +160,13 @@ export function Icon({ name }: { name: 'play' | 'pause' | 'reset' | 'check' | 'c
     plus: <path d="M8 3v10M3 8h10" />,
     book: <path d="M2.5 3.2c2-.7 3.7-.5 5.5.7 1.8-1.2 3.500-1.400 5.500-.7v9c-2-.7-3.700-.5-5.500.7-1.800-1.200-3.500-1.400-5.500-.7zM8 3.900v9" />,
     chevron: <path d="M6 3.5L10.5 8 6 12.5" />,
+    steps: <path d="M2.500 13h3.500V9.500h3.500V6H13" />,
+    pins: (
+      <>
+        <rect x="4.500" y="4.500" width="7" height="7" rx="1" />
+        <path d="M6.500 2v2.500M9.500 2v2.500M6.500 11.500V14M9.500 11.500V14M2 6.500h2.500M2 9.500h2.500M11.500 6.500H14M11.500 9.500H14" />
+      </>
+    ),
     eye: (
       <>
         <path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z" />
@@ -226,6 +249,8 @@ export function App() {
           <Dock />
         </div>
         <div className="right">
+          <SolutionPanel />
+          <PinTool />
           <ReferencePanel />
           <BoardPanel />
           {exercise && <ChecksPanel exercise={exercise} />}
