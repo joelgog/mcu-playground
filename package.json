@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "Practise embedded C on a simulated STM32F072 (Cortex-M0): real compiler, auto-checked exercises, explained solutions",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",

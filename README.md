@@ -264,6 +264,8 @@ docs/            screenshots
 
 ## Licences and trademarks
 
+The playground's own code is released under the [MIT License](LICENSE).
+
 The files in `firmware/cmsis/` are the CMSIS core headers by Arm and the STM32F0 device
 headers by STMicroelectronics, both under the Apache License 2.0. Their licence texts
 are in `firmware/cmsis/LICENSE-ARM.txt` and `firmware/cmsis/LICENSE-ST.md`.
